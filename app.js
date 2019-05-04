@@ -3,6 +3,7 @@ const fs = require(`fs`),
     path = require(`path`);
 
 const AudioRecorder = require(`node-audiorecorder`);
+const xevEmitter = require('xev-emitter')(process.stdin);
 
 const DIRECTORY = `examples-recordings`;
 
@@ -18,29 +19,26 @@ if (!fs.existsSync(DIRECTORY)){
     fs.mkdirSync(DIRECTORY);
 }
 // Create file path with random name.
-const fileName = path.join(DIRECTORY, Math.random().toString(36).replace(/[^a-z]+/g, ``).substr(0, 4).concat(`.wav`));
-console.log(`Writing new recording file at: `, fileName);
+const fileName = path.join(DIRECTORY, 'record').concat(`.wav`);
+console.log(`filename : `, fileName);
 
 // Create write stream.
-const fileStream = fs.createWriteStream(fileName, { encoding: `binary` });
-// Start and write to the file.
-audioRecorder.start().stream().pipe(fileStream);
+let fileStream = null;
 
-// Log information on the following events
-audioRecorder.stream().on(`close`, function(code) {
-    console.warn(`Recording closed. Exit code: `, code);
-});
-audioRecorder.stream().on(`end`, function() {
-    console.warn(`Recording ended.`);
-});
-audioRecorder.stream().on(`error`, function() {
-    console.warn(`Recording error.`);
-});
-// Write incoming data out the console.
-/*audioRecorder.stream().on(`data`, function(chunk) {
-	console.log(chunk);
-});*/
-
-// Keep process alive.
 process.stdin.resume();
-console.warn(`Press ctrl+c to exit.`);
+
+xevEmitter.on('KeyPress', (key) => {
+    console.log(key, 'was pressed');
+    if(key === 'ISO_Level3_Shift') {
+        fileStream = fs.createWriteStream(fileName, { encoding: `binary` });
+        audioRecorder.start().stream().pipe(fileStream);
+    }
+});
+
+xevEmitter.on('KeyRelease', (key) => {
+    console.log(key, 'was released');
+    if(key === 'ISO_Level3_Shift') {
+        audioRecorder.stop();
+        fileStream = null;
+    }
+});
