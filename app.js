@@ -42,14 +42,21 @@ xevEmitter.on('KeyRelease', (key) => {
             audioRecorder.stop();
             fileStream = null;
 
-            var a = exec('cd ~/Documents/appointment-ai-v2 && python3 main.py');
+            if(!ding) {
+                ding = fs.createReadStream('ding.mp3');
+            }
+
+            var jarvis = exec('cd ~/Documents/appointment-ai-v2 && python3 main.py');
+
             ding.pipe(new Lame.Decoder())
                 .on('format', function (format) {
                     this.pipe(new Speaker(format));
                 });
 
+            ding = null;
+
             process.on('exit', function () {
-                a.kill();
+                jarvis.kill();
             });
 
         }, 1500);
